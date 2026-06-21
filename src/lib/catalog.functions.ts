@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import type { Product, Testimonial } from "./types";
 
 function publicClient() {
   const url = process.env.SUPABASE_URL;
@@ -11,19 +12,19 @@ function publicClient() {
   });
 }
 
-export const listProducts = createServerFn({ method: "GET" }).handler(async () => {
+export const listProducts = createServerFn({ method: "GET" }).handler(async (): Promise<Product[]> => {
   const sb = publicClient();
   const { data, error } = await sb
     .from("products")
     .select("*, categories(slug,name)")
     .order("sort_order", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown[];
+  return (data ?? []) as Product[];
 });
 
 export const getProduct = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().min(1).max(120) }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<Product | null> => {
     const sb = publicClient();
     const { data: row, error } = await sb
       .from("products")
@@ -31,10 +32,10 @@ export const getProduct = createServerFn({ method: "GET" })
       .eq("slug", data.slug)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return row as unknown;
+    return (row as Product | null) ?? null;
   });
 
-export const listTestimonials = createServerFn({ method: "GET" }).handler(async () => {
+export const listTestimonials = createServerFn({ method: "GET" }).handler(async (): Promise<Testimonial[]> => {
   const sb = publicClient();
   const { data, error } = await sb
     .from("testimonials")
@@ -42,7 +43,7 @@ export const listTestimonials = createServerFn({ method: "GET" }).handler(async 
     .eq("is_published", true)
     .order("sort_order", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown[];
+  return (data ?? []) as Testimonial[];
 });
 
 const newsletterSchema = z.object({
