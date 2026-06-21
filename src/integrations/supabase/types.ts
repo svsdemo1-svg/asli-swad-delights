@@ -14,7 +14,215 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      contact_messages: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          mobile: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          mobile?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          mobile?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      corporate_inquiries: {
+        Row: {
+          company_name: string
+          created_at: string
+          email: string
+          id: string
+          mobile: string
+          name: string
+          requirement: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          email: string
+          id?: string
+          mobile: string
+          name: string
+          requirement: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          email?: string
+          id?: string
+          mobile?: string
+          name?: string
+          requirement?: string
+        }
+        Relationships: []
+      }
+      newsletter_subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          benefits: string[]
+          category_id: string | null
+          created_at: string
+          id: string
+          image_key: string
+          in_stock: boolean
+          ingredients: string[]
+          is_best_seller: boolean
+          is_featured: boolean
+          long_description: string | null
+          name: string
+          nutritional_info: Json
+          price_inr: number
+          short_description: string
+          slug: string
+          sort_order: number
+          suitable_for: string[]
+          weight_grams: number
+        }
+        Insert: {
+          benefits?: string[]
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          image_key: string
+          in_stock?: boolean
+          ingredients?: string[]
+          is_best_seller?: boolean
+          is_featured?: boolean
+          long_description?: string | null
+          name: string
+          nutritional_info?: Json
+          price_inr: number
+          short_description: string
+          slug: string
+          sort_order?: number
+          suitable_for?: string[]
+          weight_grams?: number
+        }
+        Update: {
+          benefits?: string[]
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          image_key?: string
+          in_stock?: boolean
+          ingredients?: string[]
+          is_best_seller?: boolean
+          is_featured?: boolean
+          long_description?: string | null
+          name?: string
+          nutritional_info?: Json
+          price_inr?: number
+          short_description?: string
+          slug?: string
+          sort_order?: number
+          suitable_for?: string[]
+          weight_grams?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      testimonials: {
+        Row: {
+          author_name: string
+          author_title: string | null
+          body: string
+          created_at: string
+          id: string
+          is_published: boolean
+          rating: number
+          sort_order: number
+        }
+        Insert: {
+          author_name: string
+          author_title?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          rating?: number
+          sort_order?: number
+        }
+        Update: {
+          author_name?: string
+          author_title?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          rating?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
