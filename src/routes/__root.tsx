@@ -88,13 +88,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "Healthy Delights" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:title", content: "Healthy Delights — Asli Dadi Nani Ka Swad" },
-      { name: "twitter:title", content: "Healthy Delights — Asli Dadi Nani Ka Swad" },
-      { name: "description", content: "Healthy Delights is a premium e-commerce website for traditional, all-natural Indian snacks and laddoos." },
-      { property: "og:description", content: "Healthy Delights is a premium e-commerce website for traditional, all-natural Indian snacks and laddoos." },
-      { name: "twitter:description", content: "Healthy Delights is a premium e-commerce website for traditional, all-natural Indian snacks and laddoos." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/07400be4-2970-4283-b856-5a7a91bbbca0/id-preview-773677a9--2d56bc0a-77d2-4221-9ece-dcf169a6e8f8.lovable.app-1782049151253.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/07400be4-2970-4283-b856-5a7a91bbbca0/id-preview-773677a9--2d56bc0a-77d2-4221-9ece-dcf169a6e8f8.lovable.app-1782049151253.png" },
     ],
     links: [
       {
