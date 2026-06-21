@@ -15,7 +15,7 @@ const PATHS = [
 // TODO: replace with your project URL once a name or custom domain is set.
 const BASE_URL = "";
 
-export const Route = createFileRoute("/sitemap[.]xml")({
+export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
