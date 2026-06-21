@@ -13,7 +13,7 @@ const productsQuery = queryOptions<Product[]>({
   queryFn: () => listProducts(),
 });
 
-export const Route = createFileRoute("/products")({
+export const Route = createFileRoute("/products/")({
   head: () => ({
     meta: [
       { title: "Shop Healthy Laddoos & Traditional Snacks — Healthy Delights" },

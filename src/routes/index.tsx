@@ -1,5 +1,4 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { listProducts, listTestimonials } from "@/lib/catalog.functions";
 import { AppShell } from "@/components/layout/AppShell";
@@ -103,5 +102,3 @@ function HomePage() {
   );
 }
 
-// Track home view for analytics/recently-viewed prep
-export function _noop() { useEffect(() => {}, []); }
