@@ -106,7 +106,8 @@ function AdminHampersPage() {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </AdminShell>
   );
