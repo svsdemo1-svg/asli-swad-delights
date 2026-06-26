@@ -120,16 +120,22 @@ function CartPage() {
                 </span>
                 <span className="font-serif text-2xl">{formatINR(total)}</span>
               </div>
+              <Link
+                to="/checkout"
+                className="block w-full rounded-full bg-brand-gold py-4 text-center text-xs font-bold uppercase tracking-widest text-brand-cream"
+              >
+                Proceed to Checkout
+              </Link>
               <a
                 href={`https://wa.me/${PHONE}?text=${buildWhatsAppMessage()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full rounded-full bg-brand-gold py-4 text-center text-xs font-bold uppercase tracking-widest text-brand-cream"
+                className="mt-3 block w-full rounded-full border border-brand-cream/30 py-4 text-center text-xs font-bold uppercase tracking-widest text-brand-cream"
               >
-                Place Order on WhatsApp
+                Or order on WhatsApp
               </a>
               <p className="mt-3 text-center text-[11px] opacity-70">
-                A team member will confirm your order & share delivery details.
+                COD only for now — online payments coming soon.
               </p>
             </div>
           </>
