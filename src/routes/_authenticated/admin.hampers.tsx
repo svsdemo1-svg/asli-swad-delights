@@ -92,7 +92,9 @@ function AdminHampersPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {(q.data ?? []).map((h: Hamper) => (
+        {(q.data ?? []).map((raw) => {
+          const h = { ...raw, contents: Array.isArray(raw.contents) ? (raw.contents as string[]) : [] } as Hamper;
+          return (
           <div key={h.id} className="flex gap-3 rounded-2xl bg-brand-cream p-4 ring-1 ring-brand-brown/10">
             <img src={getProductImage(h.image_key)} alt="" className="size-20 rounded-xl object-cover" />
             <div className="flex-1">
