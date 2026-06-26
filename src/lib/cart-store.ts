@@ -9,17 +9,19 @@ export interface CartItem {
   imageKey: string;
   weightGrams: number;
   qty: number;
+  kind?: "product" | "hamper";
 }
 
 interface CartState {
   items: CartItem[];
-  wishlist: string[]; // product slugs
-  recentlyViewed: string[]; // product slugs
+  wishlist: string[]; // product slugs (local, merged into DB on login)
+  recentlyViewed: string[];
   addToCart: (item: Omit<CartItem, "qty">, qty?: number) => void;
   removeFromCart: (productId: string) => void;
   setQty: (productId: string, qty: number) => void;
   clearCart: () => void;
   toggleWishlist: (slug: string) => void;
+  setWishlist: (slugs: string[]) => void;
   trackView: (slug: string) => void;
   totalItems: () => number;
   totalAmount: () => number;
@@ -41,7 +43,7 @@ export const useCart = create<CartState>()(
               ),
             };
           }
-          return { items: [...state.items, { ...item, qty }] };
+          return { items: [...state.items, { ...item, qty, kind: item.kind ?? "product" }] };
         }),
       removeFromCart: (productId) =>
         set((state) => ({ items: state.items.filter((i) => i.productId !== productId) })),
@@ -59,6 +61,7 @@ export const useCart = create<CartState>()(
             ? state.wishlist.filter((s) => s !== slug)
             : [...state.wishlist, slug],
         })),
+      setWishlist: (slugs) => set({ wishlist: slugs }),
       trackView: (slug) =>
         set((state) => {
           const filtered = state.recentlyViewed.filter((s) => s !== slug);

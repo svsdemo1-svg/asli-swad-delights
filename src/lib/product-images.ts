@@ -13,21 +13,43 @@ import sattu from "@/assets/product-sattu.jpg";
 import nourishmentMix from "@/assets/product-nourishment-mix.jpg";
 
 export const productImages: Record<string, string> = {
+  "product-panjiri": panjiri,
   panjiri,
+  "product-dry-fruit": dryFruit,
   "dry-fruit": dryFruit,
+  "product-gond": gond,
   gond,
+  "product-ragi": ragi,
   ragi,
+  "product-dates": dates,
   dates,
+  "product-millet": millet,
   millet,
+  "product-flax": flax,
   flax,
+  "product-makhana": makhana,
   makhana,
+  "product-methi": methi,
   methi,
+  "product-figs": figs,
   figs,
+  "product-rajgira": rajgira,
   rajgira,
+  "product-sattu": sattu,
   sattu,
+  "product-nourishment-mix": nourishmentMix,
   "nourishment-mix": nourishmentMix,
 };
 
-export function getProductImage(key: string): string {
+/**
+ * Resolve an image key. Supports:
+ *  - bundled key (e.g. "product-gond") → imported asset URL
+ *  - full URL (https://...) → used as-is (admin override)
+ */
+export function getProductImage(key: string | null | undefined): string {
+  if (!key) return panjiri;
+  if (key.startsWith("http://") || key.startsWith("https://") || key.startsWith("/")) {
+    return key;
+  }
   return productImages[key] ?? panjiri;
 }
