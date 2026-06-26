@@ -1,77 +1,87 @@
+## Phase 2 — Accounts, Checkout, Gifting, Blog & Admin Editor
 
-# Healthy Delights — Build Plan
-
-A premium mobile-first e-commerce site for Menka Singh's healthy laddoos & traditional snacks brand, built in the "Festive Warm Glow" direction (warm cinematic hero, Playfair Display + Inter, brown/gold/cream palette, sticky bottom cart bar). Backed by Lovable Cloud. Payments deferred per your choice.
-
-Because this is a very large scope, I'll deliver it in **3 phases**. After each phase you preview & approve before I continue.
+This iteration adds authentication, order management, DB-synced wishlist, gifting hamper catalogue, a blog CMS, and an admin panel where Menka can edit product images, prices, and weights.
 
 ---
 
-## Phase 1 — Foundation, Catalog & Storefront (this iteration)
+### 1. Authentication (Lovable Cloud)
 
-**Backend (Lovable Cloud)**
-- Enable Lovable Cloud.
-- Tables: `products`, `product_images`, `categories`, `testimonials`, `newsletter_subscribers`, `corporate_inquiries`, `contact_messages`. RLS: public SELECT on catalog tables; INSERT only on lead/contact/newsletter tables (anon allowed).
-- Seed via migration: all 13 products (Laddoos + Punjab Di Panjiri + Nourishment Mix) with prices, weights, ingredients, benefits, "suitable for" tags.
+- Email/password + Google sign-in (Lovable-managed).
+- New public route `/auth` (sign in / sign up tabs) with form validation.
+- Integration-managed `_authenticated/` layout protects `/account`, `/orders`, `/orders/$id`, `/addresses`, `/wishlist`, `/admin/*`.
+- Header gets an account icon (sign in when logged out, account menu when logged in).
 
-**Design system**
-- `src/styles.css`: tokens `--color-brand-brown #5A3921`, `--color-brand-gold #B8792E`, `--color-brand-cream #FFF7EE`, `--color-brand-beige #F7E9D7`, `--color-brand-green #4CAF50`, custom easing.
-- Fonts via `@fontsource/playfair-display` (headings) + `@fontsource/inter` (body), imported in `__root.tsx`.
-- Reusable shadcn-based components: `ProductCard`, `TrustBadgeStrip`, `SectionHeading`, `StickyCartBar`, `Header`, `Footer`, `MobileBottomNav`.
+### 2. Database (single migration)
 
-**Pages (routes)**
-- `/` — Home with hero, trust badges, why-choose-us (6 cards), featured products (6 cards), health benefits (6 cards), testimonials carousel, newsletter, footer. Matches Festive Warm Glow layout exactly.
-- `/products` — full catalog with category filter (Laddoos / Traditional Nutrition) + search.
-- `/products/$slug` — product detail: gallery, description, ingredients, nutritional info, benefits, "suitable for" chips, related products, Add to Cart / Buy Now.
-- `/about`, `/contact` (with form + WhatsApp CTA + map embed), `/faq`.
+New tables (all with RLS + grants):
+- `profiles` (id → auth.users, full_name, mobile, created_at)
+- `app_role` enum (`admin`, `customer`) + `user_roles` + `has_role()` SECURITY DEFINER
+- `addresses` (user-scoped)
+- `orders` (user_id, status, subtotal, discount, total, coupon_code, address snapshot, payment_method='cod', notes)
+- `order_items` (order_id, product snapshot: name, slug, price, weight, qty, image_key)
+- `coupons` (code, discount_type, value, min_order, expires_at, active)
+- `wishlist` (user_id, product_id, unique)
+- `gift_hampers` (slug, name, description, price, image_key, contents jsonb, occasion, is_published)
+- `blog_posts` (slug, title, excerpt, body markdown, cover_image_key, author, published_at, is_published, seo_title, seo_description)
+- Trigger to auto-create `profiles` + default `customer` role on signup.
+- Seed: 4 gift hampers (Diwali, Wedding, Wellness, Corporate), 3 starter blog posts, 1 sample coupon `WELCOME10`.
 
-**Imagery**
-- AI-generate one premium hero image (cinematic warm laddoo shot) + one square photo per product (~13 images) into `src/assets/`.
+### 3. Checkout flow (COD only)
 
-**E-commerce (local-first, persisted)**
-- Cart + wishlist via Zustand with `localStorage` persistence — works without login.
-- Sticky bottom cart bar (mobile) showing item count + total + Checkout link.
-- "Buy on WhatsApp" CTA on cart for instant order while payments are off.
+- `/cart` → "Proceed to Checkout" (requires login; redirects to `/auth?redirect=/checkout`).
+- `/checkout`: address selector/new-address form → coupon code → review → place order (server fn writes `orders` + `order_items`, clears cart, redirects to `/orders/$id`).
+- `/orders` list, `/orders/$id` detail with printable invoice view.
+- Online payment shown as "Coming soon" disabled option.
 
-**Conversion/trust**
-- Trust badge strip across pages, best-seller tags on products, recently viewed (localStorage), exit-intent popup with newsletter, sticky WhatsApp float button.
+### 4. Wishlist sync
 
-**SEO**
-- Per-route `head()` with title/description/OG, JSON-LD `Product` schema on detail pages, `robots.txt`, dynamic `sitemap.xml` server route reflecting routes + products.
+- Existing local Zustand wishlist becomes the source while logged out.
+- On login, server fn merges local wishlist → `wishlist` table, then component reads from DB via TanStack Query.
+- `/wishlist` page lists saved products with "Move to cart".
 
-**Mobile preview** set to mobile during build.
+### 5. Gifting
+
+- `/festive-gifting` and `/corporate-gifting` rewritten to read from `gift_hampers` (filtered by occasion). Hamper cards add to cart as a single line item.
+
+### 6. Blog CMS
+
+- `/blog` index (DB-backed, paginated 9/page).
+- `/blog/$slug` post detail with markdown render (`react-markdown` + `remark-gfm`), JSON-LD `Article` schema, per-post SEO meta.
+
+### 7. Admin panel (role-gated)
+
+Routes under `/_authenticated/admin/` — gated by `has_role(uid, 'admin')` via a child `beforeLoad` check calling a server fn. Non-admins redirect to `/`.
+
+- `/admin` dashboard: counts (orders, revenue today/30d, subscribers, contact messages).
+- `/admin/products` — table with inline edit for **price, weight, image** plus toggle in_stock / featured / best_seller. Image editor accepts upload to Supabase Storage bucket `product-images` (public read) OR URL paste; falls back to bundled asset key when blank.
+- `/admin/products/$id` — full editor (name, slug, description, ingredients, benefits, suitable_for, nutritional_info JSON, category).
+- `/admin/orders` — list + status update (pending → confirmed → shipped → delivered → cancelled).
+- `/admin/hampers`, `/admin/blog`, `/admin/coupons` — CRUD lists with the same image upload helper.
+- `/admin/inquiries` — read-only list of contact + corporate messages + newsletter subs (with CSV export).
+
+### 8. Storage
+
+- Create public bucket `product-images` with RLS allowing admin-only writes, public reads. `product_card` resolves `image_key` to either bundled asset (existing keys) or storage public URL (when key starts with `storage:`).
+
+### 9. Server functions
+
+New `*.functions.ts` files: `auth.functions.ts` (profile, role check), `orders.functions.ts`, `wishlist.functions.ts`, `coupons.functions.ts`, `hampers.functions.ts`, `blog.functions.ts`, `admin.functions.ts` (all `requireSupabaseAuth` + role check where needed).
+
+### 10. UI polish
+
+- Header account dropdown, mobile drawer adds Account/Orders/Wishlist.
+- Toast confirmations for order placement, wishlist add, admin saves.
+
+### Technical notes
+
+- Stack unchanged: TanStack Start + Lovable Cloud. Supabase Auth via `lovable.auth.signInWithOAuth("google", ...)` plus email/password through `supabase.auth.signInWithPassword`. `requireSupabaseAuth` middleware on all user-scoped server fns; `has_role` rpc gates admin fns. Admin fns that touch storage policies use `supabaseAdmin` loaded inside the handler. Cart store gains `clearCart()` post-checkout. Existing public catalog reads stay on the publishable server client.
 
 ---
 
-## Phase 2 — Accounts, Checkout flow, Gifting & Blog
+### Out of scope (still)
 
-- Email/password + Google auth via Lovable Cloud; protected `/_authenticated/account`, `/orders`, `/addresses`, `/wishlist` (synced to DB).
-- Checkout pages (address → review → place order). **COD only** for now; "Online payment coming soon" stub.
-- `orders`, `order_items`, `addresses`, `coupons`, `reviews`, `wishlist`, `user_roles` tables with RLS + `has_role()` SECURITY DEFINER.
-- Coupon codes, order tracking page, GST-style invoice PDF (printable view).
-- `/corporate-gifting` page + inquiry form → DB.
-- `/festive-gifting` page with occasion hampers.
-- `/blog` index + `/blog/$slug` (DB-backed posts with categories & SEO meta).
+- Online payments (Razorpay) — explicitly deferred.
+- Shipping rate calculation, courier integration, real-time order tracking.
+- Product reviews & "frequently bought together" → Phase 3.
 
-## Phase 3 — Admin panel, Reviews, Polish
-
-- Admin role gate. Admin routes for product/inventory/order/customer/coupon/blog/review/inquiry management, plus a simple analytics dashboard (orders, revenue, top products via SQL views).
-- Product reviews & ratings on PDP.
-- "Frequently bought together" + product recommendations.
-- PWA manifest (home-screen installable; no offline SW per defaults).
-- Final SEO sweep, accessibility pass, perf pass.
-
----
-
-## Out of scope (will need separate decisions later)
-
-- **Razorpay / online payments** — you chose skip; we'll wire it when you're ready (needs your keys).
-- Real Google Maps embed key, real Instagram feed API (will use static placeholder grid until you connect).
-- Shipping rate calculation / courier integration.
-
-## Technical notes
-
-- Stack stays TanStack Start + Lovable Cloud (Supabase under the hood). All DB writes go through `createServerFn` with `requireSupabaseAuth` where user-scoped; public reads use the publishable server client with narrow `TO anon` SELECT policies. Cart/wishlist start client-side (Zustand) in Phase 1, migrate to DB-synced in Phase 2 after auth lands.
-- Composition strictly mirrors the chosen "Festive Warm Glow" prototype: full-bleed hero with golden gradient overlay, 2×2 trust badge grid, single-column product cards with rounded-[40px] cream cards, brown heritage section, beige testimonial card, green-tinted newsletter card, sticky brown pill cart bar.
-
-Approve to start Phase 1.
+Approve to start building.

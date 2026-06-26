@@ -1,34 +1,30 @@
 import { Link } from "@tanstack/react-router";
-import { ShoppingBag, Menu, X } from "lucide-react";
+import { ShoppingBag, Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart-store";
+import { useAuth } from "@/lib/auth-hooks";
 
 const nav = [
   { to: "/" as const, label: "Home" },
   { to: "/products" as const, label: "Shop" },
+  { to: "/festive-gifting" as const, label: "Gifting" },
+  { to: "/blog" as const, label: "Blog" },
   { to: "/about" as const, label: "About" },
   { to: "/contact" as const, label: "Contact" },
-  { to: "/faq" as const, label: "FAQ" },
 ];
 
 export function Header() {
   const [open, setOpen] = useState(false);
   const count = useCart((s) => s.totalItems());
+  const { user } = useAuth();
 
   return (
     <nav className="sticky top-0 z-40 flex items-center justify-between border-b border-brand-brown/5 bg-brand-cream/90 px-5 py-4 backdrop-blur-md">
       <div className="flex items-center gap-3">
-        <button
-          aria-label="Open menu"
-          className="md:hidden"
-          onClick={() => setOpen(true)}
-        >
+        <button aria-label="Open menu" className="md:hidden" onClick={() => setOpen(true)}>
           <Menu className="size-5 text-brand-brown" />
         </button>
-        <Link
-          to="/"
-          className="font-serif text-xl font-bold tracking-tight text-brand-brown"
-        >
+        <Link to="/" className="font-serif text-xl font-bold tracking-tight text-brand-brown">
           Healthy Delights
         </Link>
       </div>
@@ -48,14 +44,23 @@ export function Header() {
         ))}
       </ul>
 
-      <Link to="/cart" className="relative" aria-label="View cart">
-        <ShoppingBag className="size-5 text-brand-brown" />
-        {count > 0 && (
-          <span className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full bg-brand-gold text-[10px] font-bold text-brand-cream">
-            {count}
-          </span>
-        )}
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link
+          to={user ? "/account" : "/auth"}
+          className="text-brand-brown"
+          aria-label={user ? "My account" : "Sign in"}
+        >
+          <User className="size-5" />
+        </Link>
+        <Link to="/cart" className="relative" aria-label="View cart">
+          <ShoppingBag className="size-5 text-brand-brown" />
+          {count > 0 && (
+            <span className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full bg-brand-gold text-[10px] font-bold text-brand-cream">
+              {count}
+            </span>
+          )}
+        </Link>
+      </div>
 
       {open && (
         <div className="fixed inset-0 z-50 bg-brand-brown/40 md:hidden" onClick={() => setOpen(false)}>
@@ -82,21 +87,19 @@ export function Header() {
                 </li>
               ))}
               <li>
-                <Link
-                  to="/corporate-gifting"
-                  onClick={() => setOpen(false)}
-                  className="block text-sm font-medium uppercase tracking-widest text-brand-gold"
-                >
-                  Corporate Gifting
+                <Link to={user ? "/account" : "/auth"} onClick={() => setOpen(false)} className="block font-serif text-2xl text-brand-brown">
+                  {user ? "My Account" : "Sign in"}
                 </Link>
               </li>
+              {user && (
+                <>
+                  <li><Link to="/orders" onClick={() => setOpen(false)} className="block font-serif text-2xl text-brand-brown">My Orders</Link></li>
+                  <li><Link to="/wishlist" onClick={() => setOpen(false)} className="block font-serif text-2xl text-brand-brown">Wishlist</Link></li>
+                </>
+              )}
               <li>
-                <Link
-                  to="/festive-gifting"
-                  onClick={() => setOpen(false)}
-                  className="block text-sm font-medium uppercase tracking-widest text-brand-gold"
-                >
-                  Festive Gifting
+                <Link to="/corporate-gifting" onClick={() => setOpen(false)} className="block text-sm font-medium uppercase tracking-widest text-brand-gold">
+                  Corporate Gifting
                 </Link>
               </li>
             </ul>
