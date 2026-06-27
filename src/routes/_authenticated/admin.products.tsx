@@ -105,6 +105,13 @@ function Row({
             <Mini label="Weight (g)" value={weight} onChange={setWeight} type="number" />
             <Mini label="Image key / URL" value={image} onChange={setImage} />
           </div>
+          <div className="flex items-center gap-2 pt-1">
+            <label className="cursor-pointer rounded-full bg-brand-beige/60 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-brand-brown hover:bg-brand-beige">
+              {uploading ? "Uploading…" : "Upload image"}
+              <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={uploading} />
+            </label>
+            <span className="text-[10px] text-brand-brown/50">JPG/PNG/WebP up to 5 MB</span>
+          </div>
           <div className="flex flex-wrap gap-3 pt-1 text-xs text-brand-brown">
             <Check label="In stock" checked={inStock} onChange={setInStock} />
             <Check label="Featured" checked={featured} onChange={setFeatured} />
