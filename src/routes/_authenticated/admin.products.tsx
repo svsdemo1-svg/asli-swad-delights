@@ -42,12 +42,36 @@ function Row({
   onSaved: () => void;
 }) {
   const updateFn = useServerFn(adminUpdateProduct);
+  const uploadFn = useServerFn(adminUploadProductImage);
   const [price, setPrice] = useState(String(product.price_inr));
   const [weight, setWeight] = useState(String(product.weight_grams));
   const [image, setImage] = useState(product.image_key);
+  const [uploading, setUploading] = useState(false);
   const [inStock, setInStock] = useState(product.in_stock);
   const [featured, setFeatured] = useState(product.is_featured);
   const [bestSeller, setBestSeller] = useState(product.is_best_seller);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Max 5 MB"); return; }
+    setUploading(true);
+    try {
+      const buf = await file.arrayBuffer();
+      let bin = "";
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const dataBase64 = btoa(bin);
+      const res = await uploadFn({ data: { filename: file.name, contentType: file.type || "image/jpeg", dataBase64 } });
+      setImage(res.url);
+      toast.success("Uploaded — click Save to apply");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   const save = useMutation({
     mutationFn: () =>
