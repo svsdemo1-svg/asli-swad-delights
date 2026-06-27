@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ShoppingBag, Menu, X, User } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-hooks";
 
@@ -15,8 +15,11 @@ const nav = [
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const count = useCart((s) => s.totalItems());
   const { user } = useAuth();
+
 
   return (
     <nav className="sticky top-0 z-40 flex items-center justify-between border-b border-brand-brown/5 bg-brand-cream/90 px-5 py-4 backdrop-blur-md">
@@ -54,7 +57,7 @@ export function Header() {
         </Link>
         <Link to="/cart" className="relative" aria-label="View cart">
           <ShoppingBag className="size-5 text-brand-brown" />
-          {count > 0 && (
+          {mounted && count > 0 && (
             <span className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full bg-brand-gold text-[10px] font-bold text-brand-cream">
               {count}
             </span>
