@@ -57,7 +57,7 @@ export function Header() {
         </Link>
         <Link to="/cart" className="relative" aria-label="View cart">
           <ShoppingBag className="size-5 text-brand-brown" />
-          {count > 0 && (
+          {mounted && count > 0 && (
             <span className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full bg-brand-gold text-[10px] font-bold text-brand-cream">
               {count}
             </span>
