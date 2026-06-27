@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { adminUpdateProduct } from "@/lib/admin.functions";
+import { adminUpdateProduct, adminUploadProductImage } from "@/lib/admin.functions";
 import { listProducts } from "@/lib/catalog.functions";
 import { getProductImage } from "@/lib/product-images";
 import { formatINR } from "@/lib/format";
