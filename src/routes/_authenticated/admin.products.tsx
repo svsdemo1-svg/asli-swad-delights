@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { adminUpdateProduct } from "@/lib/admin.functions";
+import { adminUpdateProduct, adminUploadProductImage } from "@/lib/admin.functions";
 import { listProducts } from "@/lib/catalog.functions";
 import { getProductImage } from "@/lib/product-images";
 import { formatINR } from "@/lib/format";
@@ -42,12 +42,36 @@ function Row({
   onSaved: () => void;
 }) {
   const updateFn = useServerFn(adminUpdateProduct);
+  const uploadFn = useServerFn(adminUploadProductImage);
   const [price, setPrice] = useState(String(product.price_inr));
   const [weight, setWeight] = useState(String(product.weight_grams));
   const [image, setImage] = useState(product.image_key);
+  const [uploading, setUploading] = useState(false);
   const [inStock, setInStock] = useState(product.in_stock);
   const [featured, setFeatured] = useState(product.is_featured);
   const [bestSeller, setBestSeller] = useState(product.is_best_seller);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Max 5 MB"); return; }
+    setUploading(true);
+    try {
+      const buf = await file.arrayBuffer();
+      let bin = "";
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const dataBase64 = btoa(bin);
+      const res = await uploadFn({ data: { filename: file.name, contentType: file.type || "image/jpeg", dataBase64 } });
+      setImage(res.url);
+      toast.success("Uploaded — click Save to apply");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   const save = useMutation({
     mutationFn: () =>
@@ -80,6 +104,13 @@ function Row({
             <Mini label="Price (₹)" value={price} onChange={setPrice} type="number" />
             <Mini label="Weight (g)" value={weight} onChange={setWeight} type="number" />
             <Mini label="Image key / URL" value={image} onChange={setImage} />
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <label className="cursor-pointer rounded-full bg-brand-beige/60 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-brand-brown hover:bg-brand-beige">
+              {uploading ? "Uploading…" : "Upload image"}
+              <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={uploading} />
+            </label>
+            <span className="text-[10px] text-brand-brown/50">JPG/PNG/WebP up to 5 MB</span>
           </div>
           <div className="flex flex-wrap gap-3 pt-1 text-xs text-brand-brown">
             <Check label="In stock" checked={inStock} onChange={setInStock} />
