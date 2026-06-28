@@ -338,6 +338,9 @@ export type Database = {
         Row: {
           coupon_code: string | null
           created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
           discount_inr: number
           id: string
           notes: string | null
@@ -360,6 +363,9 @@ export type Database = {
         Insert: {
           coupon_code?: string | null
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           discount_inr?: number
           id?: string
           notes?: string | null
@@ -382,6 +388,9 @@ export type Database = {
         Update: {
           coupon_code?: string | null
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           discount_inr?: number
           id?: string
           notes?: string | null
@@ -403,11 +412,57 @@ export type Database = {
         }
         Relationships: []
       }
+      product_reviews: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          product_id: string
+          rating: number
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          product_id: string
+          rating: number
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          rating?: number
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           benefits: string[]
           category_id: string | null
           created_at: string
+          delivery_eta: string | null
+          gallery_image_keys: string[]
           id: string
           image_key: string
           in_stock: boolean
@@ -416,11 +471,17 @@ export type Database = {
           is_featured: boolean
           long_description: string | null
           name: string
+          nutrition_facts: Json | null
           nutritional_info: Json
           price_inr: number
+          related_slugs: string[]
+          seo_description: string | null
+          seo_title: string | null
+          shelf_life: string | null
           short_description: string
           slug: string
           sort_order: number
+          storage_instructions: string | null
           suitable_for: string[]
           weight_grams: number
         }
@@ -428,6 +489,8 @@ export type Database = {
           benefits?: string[]
           category_id?: string | null
           created_at?: string
+          delivery_eta?: string | null
+          gallery_image_keys?: string[]
           id?: string
           image_key: string
           in_stock?: boolean
@@ -436,11 +499,17 @@ export type Database = {
           is_featured?: boolean
           long_description?: string | null
           name: string
+          nutrition_facts?: Json | null
           nutritional_info?: Json
           price_inr: number
+          related_slugs?: string[]
+          seo_description?: string | null
+          seo_title?: string | null
+          shelf_life?: string | null
           short_description: string
           slug: string
           sort_order?: number
+          storage_instructions?: string | null
           suitable_for?: string[]
           weight_grams?: number
         }
@@ -448,6 +517,8 @@ export type Database = {
           benefits?: string[]
           category_id?: string | null
           created_at?: string
+          delivery_eta?: string | null
+          gallery_image_keys?: string[]
           id?: string
           image_key?: string
           in_stock?: boolean
@@ -456,11 +527,17 @@ export type Database = {
           is_featured?: boolean
           long_description?: string | null
           name?: string
+          nutrition_facts?: Json | null
           nutritional_info?: Json
           price_inr?: number
+          related_slugs?: string[]
+          seo_description?: string | null
+          seo_title?: string | null
+          shelf_life?: string | null
           short_description?: string
           slug?: string
           sort_order?: number
+          storage_instructions?: string | null
           suitable_for?: string[]
           weight_grams?: number
         }
@@ -593,6 +670,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_or_super: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "customer" | "super_admin"
