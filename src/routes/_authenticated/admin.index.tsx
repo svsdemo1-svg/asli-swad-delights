@@ -1,10 +1,9 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { adminDashboard, checkAdmin, claimFirstAdmin } from "@/lib/admin.functions";
+import { adminDashboard, checkAdmin, claimFirstSuperAdmin } from "@/lib/admin.functions";
 import { formatINR } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
@@ -13,29 +12,25 @@ export const Route = createFileRoute("/_authenticated/admin/")({
 });
 
 function AdminDashboard() {
-  const navigate = useNavigate();
   const checkFn = useServerFn(checkAdmin);
-  const claimFn = useServerFn(claimFirstAdmin);
+  const claimFn = useServerFn(claimFirstSuperAdmin);
   const dashFn = useServerFn(adminDashboard);
 
   const adminQ = useQuery({ queryKey: ["is-admin"], queryFn: () => checkFn() });
 
-  useEffect(() => {
-    if (adminQ.data && !adminQ.data.isAdmin) {
-      // not yet admin – do nothing here; offer claim button below
-    }
-  }, [adminQ.data, navigate]);
-
   const claim = useMutation({
     mutationFn: () => claimFn(),
     onSuccess: (res) => {
-      if (res.ok) {
-        toast.success("You are now the admin!");
+      if (res.status === "claimed" || res.status === "already_super_admin") {
+        toast.success("Super Admin access granted!");
         window.location.reload();
+      } else if (res.status === "super_admin_exists") {
+        toast.error("A Super Admin already exists. Ask them to grant you admin access.");
       } else {
-        toast.error(res.message ?? "Could not claim admin");
+        toast.error("Could not claim admin");
       }
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const dashQ = useQuery({

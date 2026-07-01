@@ -9,7 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ShippingPolicyRouteImport } from './routes/shipping-policy'
+import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as FestiveGiftingRouteImport } from './routes/festive-gifting'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as CorporateGiftingRouteImport } from './routes/corporate-gifting'
@@ -36,9 +40,29 @@ import { Route as AuthenticatedAdminHampersRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminCouponsRouteImport } from './routes/_authenticated/admin.coupons'
 import { Route as AuthenticatedAdminBlogRouteImport } from './routes/_authenticated/admin.blog'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShippingPolicyRoute = ShippingPolicyRouteImport.update({
+  id: '/shipping-policy',
+  path: '/shipping-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefundPolicyRoute = RefundPolicyRouteImport.update({
+  id: '/refund-policy',
+  path: '/refund-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FestiveGiftingRoute = FestiveGiftingRouteImport.update({
@@ -181,7 +205,11 @@ export interface FileRoutesByFullPath {
   '/corporate-gifting': typeof CorporateGiftingRoute
   '/faq': typeof FaqRoute
   '/festive-gifting': typeof FestiveGiftingRoute
+  '/privacy': typeof PrivacyRoute
+  '/refund-policy': typeof RefundPolicyRoute
+  '/shipping-policy': typeof ShippingPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/account': typeof AuthenticatedAccountRoute
   '/checkout': typeof AuthenticatedCheckoutRoute
   '/wishlist': typeof AuthenticatedWishlistRoute
@@ -208,7 +236,11 @@ export interface FileRoutesByTo {
   '/corporate-gifting': typeof CorporateGiftingRoute
   '/faq': typeof FaqRoute
   '/festive-gifting': typeof FestiveGiftingRoute
+  '/privacy': typeof PrivacyRoute
+  '/refund-policy': typeof RefundPolicyRoute
+  '/shipping-policy': typeof ShippingPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/account': typeof AuthenticatedAccountRoute
   '/checkout': typeof AuthenticatedCheckoutRoute
   '/wishlist': typeof AuthenticatedWishlistRoute
@@ -237,7 +269,11 @@ export interface FileRoutesById {
   '/corporate-gifting': typeof CorporateGiftingRoute
   '/faq': typeof FaqRoute
   '/festive-gifting': typeof FestiveGiftingRoute
+  '/privacy': typeof PrivacyRoute
+  '/refund-policy': typeof RefundPolicyRoute
+  '/shipping-policy': typeof ShippingPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/checkout': typeof AuthenticatedCheckoutRoute
   '/_authenticated/wishlist': typeof AuthenticatedWishlistRoute
@@ -266,7 +302,11 @@ export interface FileRouteTypes {
     | '/corporate-gifting'
     | '/faq'
     | '/festive-gifting'
+    | '/privacy'
+    | '/refund-policy'
+    | '/shipping-policy'
     | '/sitemap.xml'
+    | '/terms'
     | '/account'
     | '/checkout'
     | '/wishlist'
@@ -293,7 +333,11 @@ export interface FileRouteTypes {
     | '/corporate-gifting'
     | '/faq'
     | '/festive-gifting'
+    | '/privacy'
+    | '/refund-policy'
+    | '/shipping-policy'
     | '/sitemap.xml'
+    | '/terms'
     | '/account'
     | '/checkout'
     | '/wishlist'
@@ -321,7 +365,11 @@ export interface FileRouteTypes {
     | '/corporate-gifting'
     | '/faq'
     | '/festive-gifting'
+    | '/privacy'
+    | '/refund-policy'
+    | '/shipping-policy'
     | '/sitemap.xml'
+    | '/terms'
     | '/_authenticated/account'
     | '/_authenticated/checkout'
     | '/_authenticated/wishlist'
@@ -350,7 +398,11 @@ export interface RootRouteChildren {
   CorporateGiftingRoute: typeof CorporateGiftingRoute
   FaqRoute: typeof FaqRoute
   FestiveGiftingRoute: typeof FestiveGiftingRoute
+  PrivacyRoute: typeof PrivacyRoute
+  RefundPolicyRoute: typeof RefundPolicyRoute
+  ShippingPolicyRoute: typeof ShippingPolicyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsRoute: typeof TermsRoute
   BlogSlugRoute: typeof BlogSlugRoute
   ProductsSlugRoute: typeof ProductsSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -359,11 +411,39 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shipping-policy': {
+      id: '/shipping-policy'
+      path: '/shipping-policy'
+      fullPath: '/shipping-policy'
+      preLoaderRoute: typeof ShippingPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/refund-policy': {
+      id: '/refund-policy'
+      path: '/refund-policy'
+      fullPath: '/refund-policy'
+      preLoaderRoute: typeof RefundPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/festive-gifting': {
@@ -587,7 +667,11 @@ const rootRouteChildren: RootRouteChildren = {
   CorporateGiftingRoute: CorporateGiftingRoute,
   FaqRoute: FaqRoute,
   FestiveGiftingRoute: FestiveGiftingRoute,
+  PrivacyRoute: PrivacyRoute,
+  RefundPolicyRoute: RefundPolicyRoute,
+  ShippingPolicyRoute: ShippingPolicyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermsRoute: TermsRoute,
   BlogSlugRoute: BlogSlugRoute,
   ProductsSlugRoute: ProductsSlugRoute,
   BlogIndexRoute: BlogIndexRoute,

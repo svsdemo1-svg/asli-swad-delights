@@ -136,6 +136,47 @@ export const placeOrder = createServerFn({ method: "POST" })
     const { error: itemsErr } = await supabase.from("order_items").insert(itemRows);
     if (itemsErr) throw new Error(itemsErr.message);
 
+    // Fire-and-forget order confirmation email via Resend (test sender).
+    // Configure a custom verified domain in Resend before production launch.
+    const resendKey = process.env.RESEND_API_KEY;
+    const recipient = context.claims?.email as string | undefined;
+    if (resendKey && recipient) {
+      try {
+        const itemLines = data.items
+          .map((i) => `<tr><td style="padding:6px 0">${i.name} × ${i.qty}</td><td align="right">₹${i.price * i.qty}</td></tr>`)
+          .join("");
+        const html = `
+          <div style="font-family:system-ui,sans-serif;max-width:560px;margin:auto;color:#3b2a1e">
+            <h2 style="font-family:Georgia,serif">Thank you for your order!</h2>
+            <p>Hi ${data.address.full_name}, we've received your order <strong>#${order.order_number}</strong> and are preparing it fresh.</p>
+            <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
+              ${itemLines}
+              <tr><td style="padding-top:10px;border-top:1px solid #eee">Subtotal</td><td align="right" style="padding-top:10px;border-top:1px solid #eee">₹${subtotal}</td></tr>
+              ${discount > 0 ? `<tr><td>Discount (${appliedCode})</td><td align="right">-₹${discount}</td></tr>` : ""}
+              <tr><td>Shipping</td><td align="right">${shipping === 0 ? "Free" : `₹${shipping}`}</td></tr>
+              <tr><td style="font-weight:bold;padding-top:6px">Total</td><td align="right" style="font-weight:bold;padding-top:6px">₹${total}</td></tr>
+            </table>
+            <p style="font-size:13px;color:#7a6858">Shipping to:<br/>${data.address.line1}, ${data.address.line2 ? data.address.line2 + ", " : ""}${data.address.city}, ${data.address.state} - ${data.address.pincode}</p>
+            <p>— Menka Singh, Healthy Delights</p>
+          </div>`;
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${resendKey}`,
+          },
+          body: JSON.stringify({
+            from: "Healthy Delights <onboarding@resend.dev>",
+            to: [recipient],
+            subject: `Order confirmed · #${order.order_number}`,
+            html,
+          }),
+        });
+      } catch (e) {
+        console.error("[orders] email send failed", e);
+      }
+    }
+
     return { id: order.id, order_number: order.order_number };
   });
 

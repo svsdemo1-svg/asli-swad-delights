@@ -1,47 +1,79 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-// NOTE: Auth temporarily disabled per user request. All admin server fns
-// run with service-role privileges and NO caller verification. Re-enable by
-// restoring `.middleware([requireSupabaseAuth])` + assertAdmin checks.
+async function assertAdmin(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  const roles = new Set((data ?? []).map((r) => r.role));
+  const isAdmin = roles.has("admin") || roles.has("super_admin");
+  if (!isAdmin) throw new Error("Forbidden: admin role required");
+  return { isSuper: roles.has("super_admin"), isAdmin: true };
+}
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
 }
 
-export const checkAdmin = createServerFn({ method: "GET" }).handler(async () => {
-  return { isAdmin: true };
-});
+// ============ SESSION / ROLE ============
+export const checkAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const sb = await admin();
+    const { data } = await sb.from("user_roles").select("role").eq("user_id", context.userId);
+    const roles = new Set((data ?? []).map((r) => r.role));
+    return {
+      isAdmin: roles.has("admin") || roles.has("super_admin"),
+      isSuperAdmin: roles.has("super_admin"),
+    };
+  });
+
+// First authenticated user to call this becomes super_admin (+admin). No-op afterwards.
+export const claimFirstSuperAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const sb = await admin();
+    const { data, error } = await sb.rpc("claim_first_super_admin", { _user_id: context.userId });
+    if (error) throw new Error(error.message);
+    return { status: data as string };
+  });
 
 // ============ DASHBOARD ============
-export const adminDashboard = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = await admin();
-  const today = new Date();
-  const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-  const monthAgo = new Date(today.getTime() - 30 * 86400000).toISOString();
-  const [orders, ordersToday, ordersMonth, subs, contacts, inquiries, products] = await Promise.all([
-    sb.from("orders").select("total_inr,status", { count: "exact" }),
-    sb.from("orders").select("total_inr").gte("created_at", dayStart),
-    sb.from("orders").select("total_inr").gte("created_at", monthAgo),
-    sb.from("newsletter_subscribers").select("id", { count: "exact", head: true }),
-    sb.from("contact_messages").select("id", { count: "exact", head: true }),
-    sb.from("corporate_inquiries").select("id", { count: "exact", head: true }),
-    sb.from("products").select("id", { count: "exact", head: true }),
-  ]);
-  const sum = (rows: Array<{ total_inr: number | string }> | null) =>
-    (rows ?? []).reduce((s, r) => s + Number(r.total_inr), 0);
-  return {
-    orderCount: orders.count ?? 0,
-    revenueToday: sum(ordersToday.data as never),
-    revenueMonth: sum(ordersMonth.data as never),
-    subscriberCount: subs.count ?? 0,
-    contactCount: contacts.count ?? 0,
-    inquiryCount: inquiries.count ?? 0,
-    productCount: products.count ?? 0,
-    pendingOrders: (orders.data ?? []).filter((o) => o.status === "pending").length,
-  };
-});
+export const adminDashboard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const sb = await admin();
+    const today = new Date();
+    const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+    const monthAgo = new Date(today.getTime() - 30 * 86400000).toISOString();
+    const [orders, ordersToday, ordersMonth, subs, contacts, inquiries, products] = await Promise.all([
+      sb.from("orders").select("total_inr,status", { count: "exact" }),
+      sb.from("orders").select("total_inr").gte("created_at", dayStart),
+      sb.from("orders").select("total_inr").gte("created_at", monthAgo),
+      sb.from("newsletter_subscribers").select("id", { count: "exact", head: true }),
+      sb.from("contact_messages").select("id", { count: "exact", head: true }),
+      sb.from("corporate_inquiries").select("id", { count: "exact", head: true }),
+      sb.from("products").select("id", { count: "exact", head: true }),
+    ]);
+    const sum = (rows: Array<{ total_inr: number | string }> | null) =>
+      (rows ?? []).reduce((s, r) => s + Number(r.total_inr), 0);
+    return {
+      orderCount: orders.count ?? 0,
+      revenueToday: sum(ordersToday.data as never),
+      revenueMonth: sum(ordersMonth.data as never),
+      subscriberCount: subs.count ?? 0,
+      contactCount: contacts.count ?? 0,
+      inquiryCount: inquiries.count ?? 0,
+      productCount: products.count ?? 0,
+      pendingOrders: (orders.data ?? []).filter((o) => o.status === "pending").length,
+    };
+  });
 
 // ============ PRODUCTS ============
 const productUpdate = z.object({
@@ -58,8 +90,10 @@ const productUpdate = z.object({
 });
 
 export const adminUpdateProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => productUpdate.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
     const sb = await admin();
     const { id, ...patch } = data;
     const { error } = await sb.from("products").update(patch).eq("id", id);
@@ -71,12 +105,14 @@ export const adminUpdateProduct = createServerFn({ method: "POST" })
 const uploadSchema = z.object({
   filename: z.string().min(1).max(200),
   contentType: z.string().min(1).max(100),
-  dataBase64: z.string().min(1).max(8_000_000), // ~6MB binary
+  dataBase64: z.string().min(1).max(8_000_000),
 });
 
 export const adminUploadProductImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => uploadSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
     const sb = await admin();
     const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
     const safeName = data.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -85,7 +121,6 @@ export const adminUploadProductImage = createServerFn({ method: "POST" })
       .from("product-images")
       .upload(path, bytes, { contentType: data.contentType, upsert: false });
     if (upErr) throw new Error(upErr.message);
-    // Long-lived signed URL (10 years)
     const { data: signed, error: sErr } = await sb.storage
       .from("product-images")
       .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
@@ -94,25 +129,30 @@ export const adminUploadProductImage = createServerFn({ method: "POST" })
   });
 
 // ============ ORDERS ============
-export const adminListOrders = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = await admin();
-  const { data, error } = await sb
-    .from("orders")
-    .select("*, order_items(*)")
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
+export const adminListOrders = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const sb = await admin();
+    const { data, error } = await sb
+      .from("orders")
+      .select("*, order_items(*)")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
 
 export const adminUpdateOrderStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({
       id: z.string().uuid(),
       status: z.enum(["pending", "confirmed", "shipped", "delivered", "cancelled"]),
     }).parse(d),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
     const sb = await admin();
     const { error } = await sb.from("orders").update({ status: data.status }).eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -133,31 +173,37 @@ const hamperSchema = z.object({
   sort_order: z.number().int().optional().default(0),
 });
 
-export const adminListHampers = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = await admin();
-  const { data, error } = await sb.from("gift_hampers").select("*").order("sort_order", { ascending: true });
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
+export const adminListHampers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const sb = await admin();
+    const { data, error } = await sb.from("gift_hampers").select("*").order("sort_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
 
 export const adminUpsertHamper = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => hamperSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
     const sb = await admin();
-    const payload = { ...data, contents: data.contents };
     if (data.id) {
-      const { error } = await sb.from("gift_hampers").update(payload).eq("id", data.id);
+      const { error } = await sb.from("gift_hampers").update(data).eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await sb.from("gift_hampers").insert(payload);
+      const { error } = await sb.from("gift_hampers").insert(data);
       if (error) throw new Error(error.message);
     }
     return { ok: true };
   });
 
 export const adminDeleteHamper = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
     const sb = await admin();
     const { error } = await sb.from("gift_hampers").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -178,16 +224,21 @@ const postSchema = z.object({
   is_published: z.boolean().optional().default(true),
 });
 
-export const adminListPosts = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = await admin();
-  const { data, error } = await sb.from("blog_posts").select("*").order("published_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
+export const adminListPosts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const sb = await admin();
+    const { data, error } = await sb.from("blog_posts").select("*").order("published_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
 
 export const adminUpsertPost = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => postSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
     const sb = await admin();
     if (data.id) {
       const { error } = await sb.from("blog_posts").update(data).eq("id", data.id);
@@ -200,8 +251,10 @@ export const adminUpsertPost = createServerFn({ method: "POST" })
   });
 
 export const adminDeletePost = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
     const sb = await admin();
     const { error } = await sb.from("blog_posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -219,16 +272,21 @@ const couponSchema = z.object({
   is_active: z.boolean().optional().default(true),
 });
 
-export const adminListCoupons = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = await admin();
-  const { data, error } = await sb.from("coupons").select("*").order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
+export const adminListCoupons = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const sb = await admin();
+    const { data, error } = await sb.from("coupons").select("*").order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
 
 export const adminUpsertCoupon = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => couponSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
     const sb = await admin();
     const payload = { ...data, code: data.code.toUpperCase() };
     if (data.id) {
@@ -242,8 +300,10 @@ export const adminUpsertCoupon = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteCoupon = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
     const sb = await admin();
     const { error } = await sb.from("coupons").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -251,21 +311,19 @@ export const adminDeleteCoupon = createServerFn({ method: "POST" })
   });
 
 // ============ INQUIRIES ============
-export const adminListInquiries = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = await admin();
-  const [contacts, corp, subs] = await Promise.all([
-    sb.from("contact_messages").select("*").order("created_at", { ascending: false }).limit(200),
-    sb.from("corporate_inquiries").select("*").order("created_at", { ascending: false }).limit(200),
-    sb.from("newsletter_subscribers").select("*").order("created_at", { ascending: false }).limit(500),
-  ]);
-  return {
-    contacts: contacts.data ?? [],
-    corporate: corp.data ?? [],
-    subscribers: subs.data ?? [],
-  };
-});
-
-// Deprecated: auth disabled, no role claim needed.
-export const claimFirstAdmin = createServerFn({ method: "POST" }).handler(async () => {
-  return { ok: true, message: "Auth is disabled — admin panel is open." };
-});
+export const adminListInquiries = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const sb = await admin();
+    const [contacts, corp, subs] = await Promise.all([
+      sb.from("contact_messages").select("*").order("created_at", { ascending: false }).limit(200),
+      sb.from("corporate_inquiries").select("*").order("created_at", { ascending: false }).limit(200),
+      sb.from("newsletter_subscribers").select("*").order("created_at", { ascending: false }).limit(500),
+    ]);
+    return {
+      contacts: contacts.data ?? [],
+      corporate: corp.data ?? [],
+      subscribers: subs.data ?? [],
+    };
+  });
