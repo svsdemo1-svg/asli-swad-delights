@@ -73,6 +73,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+const GA_ID = import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined;
+const META_PIXEL = import.meta.env.VITE_META_PIXEL_ID as string | undefined;
+const GSC_VERIFY = import.meta.env.VITE_GSC_VERIFICATION as string | undefined;
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -88,12 +92,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "Healthy Delights" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      ...(GSC_VERIFY ? [{ name: "google-site-verification", content: GSC_VERIFY }] : []),
     ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
+    links: [{ rel: "stylesheet", href: appCss }],
+    scripts: [
+      ...(GA_ID
+        ? [
+            { src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`, async: true },
+            {
+              children: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`,
+            },
+          ]
+        : []),
+      ...(META_PIXEL
+        ? [
+            {
+              children: `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${META_PIXEL}');fbq('track','PageView');`,
+            },
+          ]
+        : []),
     ],
   }),
   shellComponent: RootShell,
