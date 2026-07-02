@@ -110,6 +110,23 @@ export const placeOrder = createServerFn({ method: "POST" })
     const shipping = subtotal >= 999 ? 0 : 49;
     const total = Math.max(0, subtotal - discount + shipping);
 
+    // Verify Razorpay payment signature server-side before persisting the order.
+    let paymentMethod: "cod" | "razorpay" = "cod";
+    let razorpayPaymentId: string | null = null;
+    let razorpayOrderId: string | null = null;
+    if (data.payment.method === "razorpay") {
+      const { verifyRazorpaySignature } = await import("./payments.functions");
+      const ok = await verifyRazorpaySignature({
+        razorpay_order_id: data.payment.razorpay_order_id,
+        razorpay_payment_id: data.payment.razorpay_payment_id,
+        razorpay_signature: data.payment.razorpay_signature,
+      });
+      if (!ok) throw new Error("Payment signature verification failed");
+      paymentMethod = "razorpay";
+      razorpayPaymentId = data.payment.razorpay_payment_id;
+      razorpayOrderId = data.payment.razorpay_order_id;
+    }
+
     const { data: order, error } = await supabase
       .from("orders")
       .insert({
@@ -119,8 +136,12 @@ export const placeOrder = createServerFn({ method: "POST" })
         shipping_inr: shipping,
         total_inr: total,
         coupon_code: appliedCode,
-        payment_method: "cod",
-        notes: data.notes || null,
+        payment_method: paymentMethod,
+        status: paymentMethod === "razorpay" ? "confirmed" : "pending",
+        notes: [
+          data.notes || "",
+          razorpayPaymentId ? `Razorpay: ${razorpayOrderId} / ${razorpayPaymentId}` : "",
+        ].filter(Boolean).join(" | ") || null,
         ship_full_name: data.address.full_name,
         ship_mobile: data.address.mobile,
         ship_line1: data.address.line1,
