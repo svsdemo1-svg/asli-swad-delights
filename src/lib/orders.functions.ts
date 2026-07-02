@@ -13,6 +13,16 @@ const itemSchema = z.object({
   kind: z.enum(["product", "hamper"]).optional().default("product"),
 });
 
+const paymentSchema = z.discriminatedUnion("method", [
+  z.object({ method: z.literal("cod") }),
+  z.object({
+    method: z.literal("razorpay"),
+    razorpay_order_id: z.string().min(1).max(80),
+    razorpay_payment_id: z.string().min(1).max(80),
+    razorpay_signature: z.string().min(1).max(200),
+  }),
+]);
+
 const placeOrderSchema = z.object({
   items: z.array(itemSchema).min(1).max(50),
   address: z.object({
@@ -26,6 +36,7 @@ const placeOrderSchema = z.object({
   }),
   coupon_code: z.string().trim().max(40).optional().default(""),
   notes: z.string().max(500).optional().default(""),
+  payment: paymentSchema.optional().default({ method: "cod" }),
 });
 
 function computeDiscount(
