@@ -1,12 +1,16 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart-store";
 import { formatINR } from "@/lib/format";
 
 export function StickyCartBar() {
   const count = useCart((s) => s.totalItems());
   const total = useCart((s) => s.totalAmount());
+  // Cart state is hydrated from localStorage → guard SSR/client mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  if (count === 0) return null;
+  if (!mounted || count === 0) return null;
 
   return (
     <div className="fixed bottom-0 left-0 z-40 w-full p-4 animate-fade-in-up">
