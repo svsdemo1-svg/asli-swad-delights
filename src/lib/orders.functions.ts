@@ -198,7 +198,7 @@ export const placeOrder = createServerFn({ method: "POST" })
             Authorization: `Bearer ${resendKey}`,
           },
           body: JSON.stringify({
-            from: "Healthy Delights <onboarding@resend.dev>",
+            from: process.env.EMAIL_FROM || "Healthy Delights <onboarding@resend.dev>",
             to: [recipient],
             subject: `Order confirmed · #${order.order_number}`,
             html,
